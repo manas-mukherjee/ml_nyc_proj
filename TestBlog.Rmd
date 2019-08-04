@@ -1,0 +1,176 @@
+---
+title: "TestBlog"
+author: "Manas Kumar Mukherjee"
+date: "8/3/2019"
+output: html_document
+---
+```{r}
+names(nyc_data)
+```
+
+
+
+```{r}
+#nyc_data = read.csv('MergedBlogNycData.csv')
+
+nyc_data = read.csv('Final_MergedBlogNycData.csv')
+
+nyc_data$Water.Intensity..All.Water.Sources...gal.ft... = ifelse(is.na(nyc_data$Water.Intensity..All.Water.Sources...gal.ft...), mean(nyc_data$Water.Intensity..All.Water.Sources...gal.ft..., na.rm = TRUE), nyc_data$Water.Intensity..All.Water.Sources...gal.ft...)
+
+nyc_data$log_Water.Intensity..All.Water.Sources...gal.ft... = ifelse(is.na(nyc_data$log_Water.Intensity..All.Water.Sources...gal.ft...), mean(nyc_data$log_Water.Intensity..All.Water.Sources...gal.ft..., na.rm = TRUE), nyc_data$log_Water.Intensity..All.Water.Sources...gal.ft...)
+
+nyc_data$DOF.Gross.Floor.Area  = ifelse(is.na(nyc_data$DOF.Gross.Floor.Area ), mean(nyc_data$DOF.Gross.Floor.Area, na.rm = TRUE), nyc_data$DOF.Gross.Floor.Area )
+
+nyc_data$Weather.Normalized.Site.Electricity.Intensity..kWh.ft...  = ifelse(is.na(nyc_data$Weather.Normalized.Site.Electricity.Intensity..kWh.ft...), mean(nyc_data$Weather.Normalized.Site.Electricity.Intensity..kWh.ft..., na.rm = TRUE), nyc_data$Weather.Normalized.Site.Electricity.Intensity..kWh.ft... )
+
+```
+
+
+```{r}
+                                                                                           
+temp = ifelse(nyc_data$Largest.Property.Use.Type == "Multifamily Housing", 'MultiFamilyHousing',
+                                     ifelse(nyc_data$Largest.Property.Use.Type =="Office", "Office", "Others"))
+
+
+nyc_data$Largest.Property.Use.Type = as.factor(temp)
+#table(nyc_data$Largest.Property.Use.Type)
+```
+
+```{r}
+mean(nyc_data$Weather.Normalized.Site.Electricity.Intensity..kWh.ft...,  na.rm = TRUE)
+str(nyc_data)
+dim(nyc_data)
+
+```
+
+```{r}
+data_lm_mod = lm(score~ . -Site.EUI..kBtu.ft... + Site.EUI..kBtu.ft...:Occupancy , data = nyc_data)
+summary(data_lm_mod)
+car::vif(data_lm_mod)
+```
+
+
+```{r}
+data_lm_mod = lm(score~ . -Site.EUI..kBtu.ft... + Site.EUI..kBtu.ft...:Occupancy , data = nyc_data)
+summary(data_lm_mod)
+car::vif(data_lm_mod)
+```
+
+
+
+```{r}
+summary(data_lm_mod)
+```
+
+```{r}
+#data_lm_mod = lm(score~. , data = nyc_data)
+#summary(data_lm_mod)
+
+data_lm_mod_step = step(data_lm_mod, trace = 0)
+summary(data_lm_mod_step)
+length(coef(step(data_lm_mod_step, trace = 0)))
+```
+
+```{r}
+car::vif(data_lm_mod_step)
+```
+
+
+```{r}
+# Equal variance check 
+bptest(data_lm_mod_step)
+plot(fitted(data_lm_step), resid(data_lm_step), pch=20, col="dodgerblue")
+```
+
+```{r} 
+# Normality check 
+
+#shapiro.test(resid(data_lm_mod_step))
+qqnorm(resid(data_lm_mod_step), main = "Normal Q-Q Plot, fit_1", col = "darkgrey")
+qqline(resid(data_lm_mod_step), col = "dodgerblue", lwd = 2)
+```
+
+<!-- Outlier Detection -->
+
+```{r}
+cd_model = cooks.distance(data_lm_mod_step)
+n = length(cooks.distance(data_lm_mod_step))
+
+cd_model[cd_model>4/n]
+
+data_lm_mod_step_without_ol = lm(score ~ Borough + Largest.Property.Use.Type + DOF.Gross.Floor.Area + 
+    Year.Built + Number.of.Buildings...Self.reported + Occupancy + 
+    Site.EUI..kBtu.ft... + Weather.Normalized.Site.Electricity.Intensity..kWh.ft... + 
+    Weather.Normalized.Site.Natural.Gas.Intensity..therms.ft... + 
+    Water.Intensity..All.Water.Sources...gal.ft... + log_Direct.GHG.Emissions..Metric.Tons.CO2e. + 
+    log_Water.Intensity..All.Water.Sources...gal.ft..., data = nyc_data,
+                       subset = cd_model < 4 / length(cd_model))
+```
+
+
+```{r}
+summary(data_lm_mod_step_without_ol)
+bptest(data_lm_mod_step_without_ol)
+plot(fitted(data_lm_mod_step_without_ol), resid(data_lm_mod_step_without_ol), pch=20, col="dodgerblue")
+
+qqnorm(resid(data_lm_mod_step_without_ol), main = "Normal Q-Q Plot, fit_1", col = "darkgrey")
+qqline(resid(data_lm_mod_step_without_ol), col = "dodgerblue", lwd = 2)
+```
+
+```{r}
+cor(nyc_data)
+```
+
+
+
+```{r}
+data_lm = lm(score~. , data = nyc_data)
+summary(data_lm)
+```
+
+```{r}
+length(coef(data_lm))
+
+car::vif(data_lm)
+```
+
+```{r}
+library(lmtest)
+bptest(data_lm)
+length(resid(data_lm))
+#shapiro.test(resid(data_lm))
+
+qqnorm(resid(data_lm), main = "Normal Q-Q Plot, fit_1", col = "darkgrey")
+        qqline(resid(data_lm), col = "dodgerblue", lwd = 2)
+```
+
+```{r}
+chk = nyc_data[nyc_data$Largest.Property.Use.Type=="Multifamily Housing",]
+table(nyc_data$Largest.Property.Use.Type)
+```
+
+```{r}
+data_lm_step = step(data_lm, trace = 0)
+summary(data_lm_step)
+```
+
+```{r}
+length(coef(data_lm_step))
+```
+
+
+```{r}
+bptest(data_lm_step)
+car::vif(data_lm_step)
+```
+
+```{r}
+plot(fitted(data_lm_step), resid(data_lm_step), pch=20, col="dodgerblue")
+```
+
+```{r}
+data_lm_log = lm(log(score) ~. , data = nyc_data)
+summary(data_lm)
+```
+
+
